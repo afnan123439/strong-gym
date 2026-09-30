@@ -248,8 +248,11 @@ create index if not exists idx_workout_logs_member_date on public.workout_logs(m
 create index if not exists idx_workout_logs_program_day on public.workout_logs(program_id,day_index,exercise_name,session_date desc);
 alter table public.workout_logs enable row level security;
 create policy "workout logs readable" on public.workout_logs for select to authenticated using(member_id=(select auth.uid()) or private.is_staff());
-create policy "members insert workout logs" on public.workout_logs for insert to authenticated with check(member_id=(select auth.uid()));
-create policy "members update workout logs" on public.workout_logs for update to authenticated using(member_id=(select auth.uid())) with check(member_id=(select auth.uid()));
+create policy "members insert workout logs" on public.workout_logs for insert to authenticated
+with check(member_id=(select auth.uid()) and exists(select 1 from public.member_programs p where p.id=program_id and p.member_id=(select auth.uid())));
+create policy "members update workout logs" on public.workout_logs for update to authenticated
+using(member_id=(select auth.uid()))
+with check(member_id=(select auth.uid()) and exists(select 1 from public.member_programs p where p.id=program_id and p.member_id=(select auth.uid())));
 grant select,insert,update on public.workout_logs to authenticated;
 
 -- Daily meals, macros, and water tracking

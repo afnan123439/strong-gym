@@ -33,6 +33,13 @@ window.StrongGymAPI=(()=>{
     request('/rest/v1/member_programs?select=*&order=created_at.desc',{token}),
     request('/rest/v1/health_profiles?select=member_id,birth_date,activity_level,goal,medical_notes,updated_at&order=updated_at.desc',{token})
   ]);return{profiles,plans,subscriptions,payments,measurements,programs,health_profiles:healthProfiles}}
+  async function memberDashboardData(day=new Date().toISOString().slice(0,10)){const current=await session();if(!current)throw new Error('انتهت جلسة الدخول');const token=current.access_token,id=encodeURIComponent(current.user.id);const [subscriptions,measurements,programs,healthProfiles,meals]=await Promise.all([
+    request(`/rest/v1/subscriptions?member_id=eq.${id}&select=id,member_id,plan_id,starts_on,ends_on,status,renewal_approved,created_at,plan:membership_plans(id,code,name_ar,price_ils,duration_days)&order=created_at.desc`,{token}),
+    request(`/rest/v1/measurements?member_id=eq.${id}&select=id,member_id,height_cm,weight_kg,waist_cm,chest_cm,hips_cm,arm_cm,thigh_cm,recorded_at&order=recorded_at.desc&limit=30`,{token}),
+    request(`/rest/v1/member_programs?member_id=eq.${id}&active=eq.true&select=*&limit=1`,{token}),
+    request(`/rest/v1/health_profiles?member_id=eq.${id}&select=member_id,birth_date,activity_level,goal,medical_notes,updated_at&limit=1`,{token}),
+    request(`/rest/v1/meal_logs?member_id=eq.${id}&logged_on=eq.${day}&select=*&order=created_at.desc`,{token})
+  ]);const plans=subscriptions.map(s=>s.plan).filter(Boolean);return{subscriptions,measurements,plans,program:programs[0]||null,health:healthProfiles[0]||null,meals}}
   async function activateCash(subscriptionId,amount,note=''){const current=await session();return request('/rest/v1/rpc/activate_cash_subscription',{method:'POST',body:{p_subscription:subscriptionId,p_amount:Number(amount),p_note:note||null},token:current.access_token,headers:{prefer:'return=minimal'}})}
   async function addMeasurement(values){const current=await session();return request('/rest/v1/measurements',{method:'POST',body:{...values,recorded_by:current.user.id},token:current.access_token,headers:{prefer:'return=minimal'}})}
   async function saveProgram(values){const current=await session();const token=current.access_token;await request(`/rest/v1/member_programs?member_id=eq.${encodeURIComponent(values.member_id)}&active=eq.true`,{method:'PATCH',body:{active:false,updated_at:new Date().toISOString()},token,headers:{prefer:'return=minimal'}});return request('/rest/v1/member_programs',{method:'POST',body:{...values,created_by:current.user.id},token,headers:{prefer:'return=minimal'}})}
@@ -44,5 +51,5 @@ window.StrongGymAPI=(()=>{
   async function mealLogs(day=new Date().toISOString().slice(0,10)){const current=await session();if(!current)return[];return request(`/rest/v1/meal_logs?member_id=eq.${encodeURIComponent(current.user.id)}&logged_on=eq.${day}&select=*&order=created_at.desc`,{token:current.access_token})}
   async function addMealLog(values){const current=await session();if(!current)throw new Error('انتهت جلسة الدخول');return request('/rest/v1/meal_logs',{method:'POST',body:{...values,member_id:current.user.id},token:current.access_token,headers:{prefer:'return=representation'}})}
   async function deleteMealLog(id){const current=await session();if(!current)throw new Error('انتهت جلسة الدخول');return request(`/rest/v1/meal_logs?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',token:current.access_token,headers:{prefer:'return=minimal'}})}
-  return{signUp,signIn,signOut,recover,updatePassword,updateOwnProfile,session,profile,notifications,markNotificationRead,pendingMembers,setMemberStatus,adminData,activateCash,addMeasurement,saveProgram,memberProgram,healthProfile,saveHealthProfile,workoutLogs,saveWorkoutLog,mealLogs,addMealLog,deleteMealLog};
+  return{signUp,signIn,signOut,recover,updatePassword,updateOwnProfile,session,profile,notifications,markNotificationRead,pendingMembers,setMemberStatus,adminData,memberDashboardData,activateCash,addMeasurement,saveProgram,memberProgram,healthProfile,saveHealthProfile,workoutLogs,saveWorkoutLog,mealLogs,addMealLog,deleteMealLog};
 })();

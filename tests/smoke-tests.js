@@ -1,0 +1,18 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
+const root=path.resolve(__dirname,'..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
+const member=read('dist/member.html'),admin=read('dist/admin.html'),api=read('dist/assets/supabase-client.js'),dashboard=read('dist/assets/dashboard.js'),schema=read('supabase/schema.sql');
+const tests=[];function test(name,fn){tests.push([name,fn])}
+test('صفحات التطبيق الأساسية موجودة',()=>['dist/index.html','dist/member.html','dist/admin.html','dist/manifest.webmanifest','dist/service-worker.js'].forEach(file=>assert(fs.existsSync(path.join(root,file)),file)));
+test('تنقل المشترك يشير إلى أقسام موجودة',()=>['today','dailyNutrition','healthProfile','myMeasurements','assistant'].forEach(id=>assert(member.includes(`id="${id}"`),id)));
+test('لوحة الإدارة تحتوي جميع الواجهات',()=>['overview','members','payments','measurements','plans','settings'].forEach(view=>assert(admin.includes(`data-view="${view}"`),view)));
+test('تسجيل الخروج متاح في اللوحتين',()=>{assert(member.includes('id="logoutBtn"'));assert(admin.includes('id="logoutBtn"'));assert(dashboard.includes('top-logout'))});
+test('القائمة الجانبية تدعم الخلفية وEscape وARIA',()=>{assert(dashboard.includes('side-backdrop'));assert(dashboard.includes("e.key==='Escape'"));assert(member.includes('aria-label="القائمة الرئيسية"'));assert(admin.includes('aria-label="القائمة الرئيسية"'))});
+test('واجهات الوجبات والقياسات والصحة والبرامج موجودة',()=>['mealEntry','memberMeasurements','healthForm','memberProgramArea','strongCalc'].forEach(id=>assert(member.includes(`id="${id}"`),id)));
+test('واجهات الدفع والقياسات وإنشاء البرنامج موجودة',()=>['paymentForm','measurementForm','programForm','programLevel','programLimitation'].forEach(id=>assert(admin.includes(`id="${id}"`),id)));
+test('API يعرض العمليات الرئيسية',()=>['signUp','signIn','signOut','profile','memberDashboardData','adminData','saveProgram','saveWorkoutLog','addMealLog','deleteMealLog','saveHealthProfile'].forEach(name=>assert(api.includes(name),name)));
+test('تحميل المشترك المجمّع يستخدم خمسة طلبات متوازية',()=>{const body=api.match(/async function memberDashboardData[\s\S]*?\]\);const plans/);assert(body);assert.strictEqual((body[0].match(/request\(`/g)||[]).length,5)});
+test('كل جداول public محمية بـ RLS',()=>['profiles','membership_plans','subscriptions','cash_payments','measurements','health_profiles','notifications','audit_log','member_programs','workout_logs','meal_logs'].forEach(table=>assert(schema.includes(`alter table public.${table} enable row level security`),table)));
+test('سجل التمارين يتحقق من ملكية الخطة',()=>{assert(schema.includes('p.id=program_id and p.member_id=(select auth.uid())'))});
+test('لا يوجد service role داخل الواجهة',()=>assert(!/service_role|sb_secret_/i.test(read('dist/assets/supabase-client.js'))));
+test('الخطط تختلف حسب العضو والحالة',()=>{const context={window:{}};vm.createContext(context);vm.runInContext(read('dist/assets/program-personalization.js'),context);const build=context.window.StrongGymPersonalizer.build,base={measurement:{weight_kg:75,height_cm:170},health:{birth_date:'1995-01-01',activity_level:'moderate'},goal:'fitness',days:4,level:'intermediate'},a=build({...base,member:{id:'member-a',gender:'male'}}),b=build({...base,member:{id:'member-b',gender:'male'}}),knee=build({...base,member:{id:'member-c',gender:'female'},limitation:'knee'});assert.notDeepStrictEqual(a.workout_plan,b.workout_plan);assert(knee.notes.includes('الركبة'))});
+let passed=0;for(const [name,fn] of tests){try{fn();passed++;console.log(`✓ ${name}`)}catch(error){console.error(`✗ ${name}\n  ${error.message}`);process.exitCode=1}}console.log(`\n${passed}/${tests.length} checks passed`);

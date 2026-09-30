@@ -1,4 +1,4 @@
-const CACHE='strong-gym-v5';
+const CACHE='strong-gym-v6';
 const CORE=['./','./index.html','./member.html','./assets/styles.css','./assets/dashboard.css','./assets/app.js','./assets/dashboard.js','./assets/program-personalization.js','./assets/frontend-enhancements.js','./assets/supabase-client.js','./assets/install-pwa.js','./assets/app-icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
