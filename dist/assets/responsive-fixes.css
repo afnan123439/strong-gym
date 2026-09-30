@@ -1,0 +1,9 @@
+@media(max-width:620px){
+  .site-header .brand span{display:none}
+  .site-header .primary-btn{padding:11px 12px;font-size:10px}
+  .hero-copy{width:calc(100% - 40px);max-width:none}
+  .hero h1{font-size:42px;line-height:1.05;letter-spacing:-.045em;overflow-wrap:anywhere}
+  .hero-copy>p{font-size:13px;line-height:1.8;max-width:100%}
+  .eyebrow{font-size:9px;gap:9px}
+  .eyebrow i{width:25px}
+}
