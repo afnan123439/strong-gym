@@ -43,7 +43,21 @@ async function get(url, options) {
   });
 
   await check('ملفات JavaScript وCSS والصور الأساسية المنشورة تعمل', async () => {
-    for (const file of ['assets/styles.css', 'assets/dashboard.css', 'assets/app.js', 'assets/dashboard.js', 'assets/supabase-client.js', 'assets/strong-gym-logo.jpeg', 'assets/exercises/exercise-atlas.png']) {
+    for (const file of [
+      'assets/styles.css',
+      'assets/dashboard.css',
+      'assets/app.js',
+      'assets/dashboard-core.js',
+      'assets/dashboard-admin.js',
+      'assets/dashboard-training.js',
+      'assets/dashboard-member.js',
+      'assets/error-monitoring.js',
+      'assets/program-personalization.js',
+      'assets/frontend-enhancements.js',
+      'assets/supabase-client.js',
+      'assets/strong-gym-logo.jpeg',
+      'assets/exercises/exercise-atlas.png'
+    ]) {
       const response = await get(`${site}/${file}`);
       assert.strictEqual(response.status, 200, `${file}: ${response.status}`);
       const size = Number(response.headers.get('content-length') || 0);
