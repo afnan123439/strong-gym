@@ -160,6 +160,20 @@ async function main() {
     for (const table of tables) assert(schema.includes(`alter table public.${table} enable row level security`), table);
     assert(schema.includes('revoke all on function public.kick_member_sessions(uuid) from public'));
     assert(schema.includes('if not private.is_manager()'));
+    assert(schema.includes('alter table public.client_errors enable row level security'));
+    assert(schema.includes('user_id=(select auth.uid())'));
+  });
+
+  await check('تجهيزات التشغيل التجاري لا تحتوي أسرارًا ثابتة', () => {
+    const workflow = read('.github/workflows/daily-backup.yml');
+    const authTest = read('tests/auth-e2e.js');
+    assert(workflow.includes('secrets.SUPABASE_DB_URL'));
+    assert(workflow.includes('secrets.BACKUP_ENCRYPTION_KEY'));
+    assert(workflow.includes('--cipher-algo AES256'));
+    assert(workflow.includes('backups/*.sql.gpg'));
+    assert(authTest.includes('E2E_MANAGER_PASSWORD'));
+    assert(!/postgres(?:ql)?:\/\/[^\s"']+:[^\s"']+@/i.test(workflow + authTest));
+    assert(read('dist/assets/error-monitoring.js').includes('[email]'));
   });
 
   console.log(`\n${passed}/${passed + failures.length} full-audit checks passed`);

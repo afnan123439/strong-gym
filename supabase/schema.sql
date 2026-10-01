@@ -64,6 +64,19 @@ create table public.audit_log (
   created_at timestamptz not null default now()
 );
 
+create table public.client_errors (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  kind text not null check (kind in ('javascript','promise')),
+  message text not null check (char_length(message) <= 500),
+  source text check (char_length(source) <= 240),
+  line integer,
+  column_number integer,
+  path text check (char_length(path) <= 160),
+  user_agent text check (char_length(user_agent) <= 300),
+  created_at timestamptz not null default now()
+);
+
 create table public.member_programs (
   id uuid primary key default gen_random_uuid(), member_id uuid not null references public.profiles(id) on delete cascade,
   created_by uuid not null references public.profiles(id), goal text not null check (goal in ('weight_loss','muscle_gain','fitness')),
@@ -210,6 +223,7 @@ alter table public.profiles enable row level security; alter table public.member
 alter table public.subscriptions enable row level security; alter table public.cash_payments enable row level security;
 alter table public.measurements enable row level security; alter table public.health_profiles enable row level security;
 alter table public.notifications enable row level security; alter table public.audit_log enable row level security;
+alter table public.client_errors enable row level security;
 alter table public.member_programs enable row level security;
 
 create policy "plans readable" on public.membership_plans for select to anon,authenticated using(active);
@@ -227,6 +241,8 @@ create policy "health self update" on public.health_profiles for update to authe
 create policy "notifications readable" on public.notifications for select to authenticated using(recipient_id=(select auth.uid()));
 create policy "notifications mark read" on public.notifications for update to authenticated using(recipient_id=(select auth.uid())) with check(recipient_id=(select auth.uid()));
 create policy "audit staff read" on public.audit_log for select to authenticated using(private.is_staff());
+create policy "client errors own insert" on public.client_errors for insert to authenticated with check(user_id=(select auth.uid()));
+create policy "client errors manager read" on public.client_errors for select to authenticated using(private.is_manager());
 create policy "programs readable" on public.member_programs for select to authenticated using(member_id=(select auth.uid()) or private.is_staff());
 create policy "staff programs insert" on public.member_programs for insert to authenticated with check(private.is_staff() and created_by=(select auth.uid()));
 create policy "staff programs update" on public.member_programs for update to authenticated using(private.is_staff()) with check(private.is_staff());
@@ -236,6 +252,7 @@ grant select,update on public.profiles to authenticated; grant select,update on 
 grant select on public.cash_payments to authenticated; grant select,insert,update on public.measurements to authenticated;
 grant select,insert,update on public.health_profiles to authenticated; grant select,update on public.notifications to authenticated;
 grant select on public.audit_log to authenticated;
+grant insert,select on public.client_errors to authenticated;
 grant select,insert,update on public.member_programs to authenticated;
 
 analyze;

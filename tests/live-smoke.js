@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const site = process.env.STRONG_GYM_URL || 'https://strong-gym.s12323888.workers.dev';
+const expectedCache = process.env.EXPECTED_CACHE;
 const apiSource = fs.readFileSync(path.join(__dirname, '..', 'dist', 'assets', 'supabase-client.js'), 'utf8');
 const supabaseUrl = apiSource.match(/const url='([^']+)'/)?.[1];
 const publishableKey = apiSource.match(/const key='([^']+)'/)?.[1];
@@ -28,10 +29,16 @@ async function get(url, options) {
     assert((await response.text()).includes('STRONG'));
   });
 
-  await check('كل صفحات التطبيق المنشورة تعمل', async () => {
+  await check('كل صفحات التطبيق المنشورة تعمل والنسخة الجديدة وصلت', async () => {
     for (const file of ['index.html', 'member.html', 'admin.html', 'privacy.html', 'terms.html', 'manifest.webmanifest', 'service-worker.js']) {
       const response = await get(`${site}/${file}`);
       assert.strictEqual(response.status, 200, `${file}: ${response.status}`);
+      if (file === 'member.html') assert((await response.text()).includes('id="myProgram" class="anchor-target"'), 'member.html is still the old deployment');
+      if (file === 'service-worker.js') {
+        const worker = await response.text();
+        assert(worker.includes('strong-gym-v'), 'service worker cache is missing');
+        if (expectedCache) assert(worker.includes(expectedCache), `expected deployed cache ${expectedCache}`);
+      }
     }
   });
 

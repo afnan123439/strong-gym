@@ -1,0 +1,37 @@
+name: Daily Supabase backup
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.100.1
+      - name: Create database dump
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          test -n "$SUPABASE_DB_URL"
+          test -n "$BACKUP_ENCRYPTION_KEY"
+          mkdir -p backups
+          FILE="backups/strong-gym-$(date -u +%Y-%m-%dT%H-%M-%SZ).sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" --file "$FILE"
+          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$BACKUP_ENCRYPTION_KEY" "$FILE"
+          rm -f "$FILE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: strong-gym-database-${{ github.run_id }}
+          path: backups/*.sql.gpg
+          retention-days: 30
+          if-no-files-found: error
