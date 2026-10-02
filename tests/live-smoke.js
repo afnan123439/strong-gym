@@ -56,7 +56,7 @@ async function get(url, options) {
       'assets/frontend-enhancements.js',
       'assets/supabase-client.js',
       'assets/strong-gym-logo.jpeg',
-      'assets/exercises/exercise-atlas.png'
+      'assets/exercises/exercise-atlas.jpg'
     ]) {
       const response = await get(`${site}/${file}`);
       assert.strictEqual(response.status, 200, `${file}: ${response.status}`);
