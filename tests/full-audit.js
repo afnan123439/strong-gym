@@ -162,6 +162,28 @@ async function main() {
     assert(schema.includes('if not private.is_manager()'));
     assert(schema.includes('alter table public.client_errors enable row level security'));
     assert(schema.includes('user_id=(select auth.uid())'));
+    assert(/policy "health readable"[^\n]+private\.is_manager\(\)/.test(schema));
+    assert(!/policy "health readable"[^\n]+private\.is_staff\(\)/.test(schema));
+  });
+
+  await check('التجديد والمجموعة الخاصة لا يكشفان بيانات حساسة', () => {
+    const schema = read('supabase/schema.sql');
+    const member = read('dist/member.html');
+    const api = read('dist/assets/supabase-client.js');
+    assert(schema.includes('function public.request_subscription_renewal()'));
+    assert(schema.includes('function public.get_member_group_link()'));
+    assert(schema.includes("key='women_group_url'"));
+    assert(api.includes('requestRenewal'));
+    assert(api.includes('memberGroupLink'));
+    assert(!/chat\.whatsapp\.com/i.test(member + api));
+  });
+
+  await check('دليل التسليم ونطاق CI متطابقان', () => {
+    const domain = 'https://strong-gym.s12323888.workers.dev';
+    const guide = read('DELIVERY_GUIDE.md');
+    assert(guide.includes(domain));
+    assert(read('tests/live-smoke.js').includes(domain));
+    assert(!/chatgpt\.site/i.test(guide));
   });
 
   await check('تجهيزات التشغيل التجاري لا تحتوي أسرارًا ثابتة', () => {
