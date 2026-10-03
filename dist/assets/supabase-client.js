@@ -11,8 +11,16 @@ window.StrongGymAPI=(()=>{
     if(!response.ok)throw new Error(data?.msg||data?.message||data?.error_description||data?.error||'تعذر إكمال الطلب');
     return data;
   }
-  async function signUp({email,password,fullName,whatsapp,gender,plan}){const redirect=encodeURIComponent(`${location.origin}/index.html?confirmed=1`);return request(`/auth/v1/signup?redirect_to=${redirect}`,{method:'POST',body:{email,password,data:{full_name:fullName,whatsapp_e164:whatsapp,gender,requested_plan:plan==='quarter'?'quarterly':plan}}})}
-  async function signIn(email,password){const value=await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}});saveSession(value);return value}
+  function normalizePhone(value){
+    let phone=String(value||'').trim().replace(/[\s()-]/g,'');
+    if(phone.startsWith('00'))phone=`+${phone.slice(2)}`;
+    if(/^05\d{8}$/.test(phone))phone=`+970${phone.slice(1)}`;
+    if(!/^\+[1-9]\d{7,14}$/.test(phone))throw new Error('أدخل رقم WhatsApp بصيغة دولية، مثال: +970590000000');
+    return phone;
+  }
+  const phoneLoginEmail=phone=>`p${normalizePhone(phone).replace(/\D/g,'')}@login.strong-gym.invalid`;
+  async function signUp({email,password,fullName,whatsapp,gender,plan}){const phone=normalizePhone(whatsapp);return request('/auth/v1/signup',{method:'POST',body:{email:phoneLoginEmail(phone),password,data:{full_name:fullName,whatsapp_e164:phone,contact_email:String(email||'').trim()||null,gender,requested_plan:plan==='quarter'?'quarterly':plan}}})}
+  async function signIn(identifier,password){const login=String(identifier||'').trim();const email=login.includes('@')?login:phoneLoginEmail(login);const value=await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}});saveSession(value);return value}
   async function refresh(){const current=readSession();if(!current?.refresh_token)return null;try{const fresh=await request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:current.refresh_token}});saveSession(fresh);return fresh}catch{saveSession(null);return null}}
   async function session(){let current=readSession();if(!current)return null;const expiresAt=(current.saved_at||0)+(current.expires_in||3600)*1000;if(Date.now()>expiresAt-60000)current=await refresh();return current}
   async function profile(){const current=await session();if(!current?.access_token)return null;const rows=await request(`/rest/v1/profiles?id=eq.${encodeURIComponent(current.user.id)}&select=id,email,full_name,whatsapp_e164,gender,role,status,language,force_logout_at`,{token:current.access_token});return rows?.[0]||null}

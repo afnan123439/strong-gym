@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
 const root=path.resolve(__dirname,'..'),read=file=>fs.readFileSync(path.join(root,file),'utf8');
-const member=read('dist/member.html'),admin=read('dist/admin.html'),api=read('dist/assets/supabase-client.js'),dashboard=['dashboard-core.js','dashboard-admin.js','dashboard-training.js','dashboard-member.js'].map(file=>read(`dist/assets/${file}`)).join('\n'),schema=read('supabase/schema.sql');
+const index=read('dist/index.html'),member=read('dist/member.html'),admin=read('dist/admin.html'),api=read('dist/assets/supabase-client.js'),dashboard=['dashboard-core.js','dashboard-admin.js','dashboard-training.js','dashboard-member.js'].map(file=>read(`dist/assets/${file}`)).join('\n'),schema=read('supabase/schema.sql');
 const tests=[];function test(name,fn){tests.push([name,fn])}
 test('صفحات التطبيق الأساسية موجودة',()=>['dist/index.html','dist/member.html','dist/admin.html','dist/manifest.webmanifest','dist/service-worker.js'].forEach(file=>assert(fs.existsSync(path.join(root,file)),file)));
 test('تنقل المشترك يشير إلى أقسام موجودة',()=>['today','dailyNutrition','healthProfile','myMeasurements','assistant'].forEach(id=>assert(member.includes(`id="${id}"`),id)));
@@ -10,6 +10,7 @@ test('القائمة الجانبية تدعم الخلفية وEscape وARIA',(
 test('واجهات الوجبات والقياسات والصحة والبرامج موجودة',()=>['mealEntry','memberMeasurements','healthForm','memberProgramArea','myProgram','strongCalc'].forEach(id=>assert(member.includes(`id="${id}"`),id)));
 test('واجهات الدفع والقياسات وإنشاء البرنامج موجودة',()=>['paymentForm','measurementForm','programForm','programLevel','programLimitation'].forEach(id=>assert(admin.includes(`id="${id}"`),id)));
 test('API يعرض العمليات الرئيسية',()=>['signUp','signIn','signOut','profile','memberDashboardData','adminData','saveProgram','saveWorkoutLog','addMealLog','deleteMealLog','saveHealthProfile'].forEach(name=>assert(api.includes(name),name)));
+test('الدخول يعتمد WhatsApp والبريد اختياري',()=>{assert(index.includes('name="email" type="email"'));assert(!index.includes('required name="email"'));assert(index.includes('required name="whatsapp"'));assert(index.includes('name="identifier"'));assert(api.includes('@login.strong-gym.invalid'));assert(api.includes("login.includes('@')"));assert(schema.includes("new.raw_user_meta_data->>'contact_email'"))});
 test('دورة التجديد مكتملة وآمنة',()=>{assert(api.includes('requestRenewal'));assert(member.includes('id="renewSubscription"'));assert(schema.includes('function public.request_subscription_renewal()'));assert(schema.includes("status='awaiting_payment'"));assert(schema.includes('max(ends_on)+1'))});
 test('رابط مجموعة النساء غير مكشوف في الملفات العامة',()=>{assert(!/chat\.whatsapp\.com/i.test(member));assert(api.includes('memberGroupLink'));assert(schema.includes('function public.get_member_group_link()'));assert(schema.includes("key='women_group_url'"))});
 test('الملفات الصحية متاحة للعضو والمدير فقط',()=>{assert(/policy "health readable"[^\n]+private\.is_manager\(\)/.test(schema));assert(!/policy "health readable"[^\n]+private\.is_staff\(\)/.test(schema))});

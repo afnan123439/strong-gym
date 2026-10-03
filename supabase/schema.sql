@@ -8,7 +8,7 @@ create type public.subscription_status as enum ('awaiting_payment','active','exp
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  email text not null, full_name text not null, whatsapp_e164 text,
+  email text, full_name text not null, whatsapp_e164 text not null,
   gender public.gender_type not null,
   role public.app_role not null default 'member',
   status public.account_status not null default 'pending',
@@ -115,7 +115,7 @@ declare selected_plan bigint; selected_gender public.gender_type;
 begin
   selected_gender:=case when new.raw_user_meta_data->>'gender'='male' then 'male'::public.gender_type else 'female'::public.gender_type end;
   insert into public.profiles(id,email,full_name,whatsapp_e164,gender)
-  values(new.id,new.email,coalesce(nullif(new.raw_user_meta_data->>'full_name',''),'عضو جديد'),nullif(new.raw_user_meta_data->>'whatsapp_e164',''),selected_gender);
+  values(new.id,nullif(new.raw_user_meta_data->>'contact_email',''),coalesce(nullif(new.raw_user_meta_data->>'full_name',''),'عضو جديد'),coalesce(nullif(new.raw_user_meta_data->>'whatsapp_e164',''),new.phone),selected_gender);
   select id into selected_plan from public.membership_plans where code=coalesce(new.raw_user_meta_data->>'requested_plan','monthly') and active limit 1;
   if selected_plan is not null then insert into public.subscriptions(member_id,plan_id) values(new.id,selected_plan); end if;
   return new;
