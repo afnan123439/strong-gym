@@ -88,6 +88,7 @@ create table public.member_programs (
 );
 
 create unique index idx_profiles_email_lower on public.profiles(lower(email));
+create unique index idx_profiles_whatsapp_unique on public.profiles(whatsapp_e164);
 create index idx_profiles_status_role on public.profiles(status,role);
 create index idx_subscriptions_member_status on public.subscriptions(member_id,status);
 create index idx_subscriptions_ends_on_active on public.subscriptions(ends_on) where status='active';

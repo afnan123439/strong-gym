@@ -13,9 +13,9 @@ window.StrongGymAPI=(()=>{
   }
   function normalizePhone(value){
     let phone=String(value||'').trim().replace(/[\s()-]/g,'');
-    if(phone.startsWith('00'))phone=`+${phone.slice(2)}`;
-    if(/^05\d{8}$/.test(phone))phone=`+970${phone.slice(1)}`;
-    if(!/^\+[1-9]\d{7,14}$/.test(phone))throw new Error('أدخل رقم WhatsApp بصيغة دولية، مثال: +970590000000');
+    if(/^05[69]\d{7}$/.test(phone))phone=`+970${phone.slice(1)}`;
+    if(/^\+9725[69]\d{7}$/.test(phone))phone=`+970${phone.slice(4)}`;
+    if(!/^\+9705[69]\d{7}$/.test(phone))throw new Error('أدخل رقم WhatsApp بإحدى الصيغ: +97059… أو +97259… أو 059…');
     return phone;
   }
   const phoneLoginEmail=phone=>`p${normalizePhone(phone).replace(/\D/g,'')}@login.strong-gym.invalid`;
