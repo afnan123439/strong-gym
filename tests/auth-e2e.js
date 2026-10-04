@@ -21,13 +21,17 @@ async function request(path, { method='GET', token=key, body }={}) {
   return data;
 }
 
-async function login(email,password) {
-  return request('/auth/v1/token?grant_type=password', { method:'POST', body:{email,password} });
+async function login(label,email,password) {
+  try {
+    return await request('/auth/v1/token?grant_type=password', { method:'POST', body:{email,password} });
+  } catch (error) {
+    throw new Error(`${label} login failed: ${error.message}`);
+  }
 }
 
 (async()=>{
-  const manager = await login(process.env.E2E_MANAGER_EMAIL, process.env.E2E_MANAGER_PASSWORD);
-  const member = await login(process.env.E2E_MEMBER_EMAIL, process.env.E2E_MEMBER_PASSWORD);
+  const manager = await login('manager', process.env.E2E_MANAGER_EMAIL, process.env.E2E_MANAGER_PASSWORD);
+  const member = await login('member', process.env.E2E_MEMBER_EMAIL, process.env.E2E_MEMBER_PASSWORD);
   assert(manager.access_token && member.access_token);
 
   const managerProfile = await request(`/rest/v1/profiles?id=eq.${manager.user.id}&select=id,role,status`, {token:manager.access_token});
@@ -46,4 +50,3 @@ async function login(email,password) {
   await request('/auth/v1/logout', {method:'POST',token:member.access_token});
   console.log('✓ Auth E2E: manager login, member login, roles, RLS, logout');
 })().catch(error=>{console.error(`✗ ${error.message}`);process.exit(1)});
-
